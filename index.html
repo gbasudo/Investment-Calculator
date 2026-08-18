@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Compound Ledger — Investment Forecast Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --ink:#14213D;
+    --ink-soft:#33456e;
+    --parchment:#F6F1E1;
+    --parchment-deep:#EFE7D2;
+    --rule:#DCD0AC;
+    --gold:#B8860B;
+    --gold-deep:#8f690a;
+    --growth:#2F6D4F;
+    --growth-soft:#e4efe8;
+    --expense:#9B3B34;
+    --expense-soft:#f4e6e3;
+    --muted:#786F5C;
+    --paper-shadow: 0 1px 0 rgba(20,33,61,0.06);
+    --radius: 3px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 500px at 15% -10%, #fffdf7 0%, transparent 60%),
+      var(--parchment);
+    color:var(--ink);
+    font-family:'Inter', sans-serif;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.5;
+  }
+  ::selection{ background:var(--gold); color:#fff; }
+  a{ color: var(--ink); }
+
+  .wrap{ max-width:1180px; margin:0 auto; padding: 28px 20px 80px; }
+
+  /* ---------- Header ---------- */
+  header.top{
+    display:flex; align-items:flex-end; justify-content:space-between;
+    gap:24px; flex-wrap:wrap;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 18px; margin-bottom: 30px;
+  }
+  .brand-eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--gold-deep); margin:0 0 6px;
+  }
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size: clamp(28px, 4vw, 42px);
+    margin:0;
+    letter-spacing:-0.01em;
+  }
+  .top-note{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px; color:var(--muted); text-align:right; max-width:260px;
+  }
+
+  /* ---------- Layout ---------- */
+  .grid{
+    display:grid;
+    grid-template-columns: 360px 1fr;
+    gap: 26px;
+    align-items:start;
+  }
+  @media (max-width: 880px){
+    .grid{ grid-template-columns: 1fr; }
+  }
+
+  .panel{
+    background:#fffdf8;
+    border:1px solid var(--rule);
+    border-radius: var(--radius);
+    box-shadow: var(--paper-shadow);
+  }
+
+  /* ---------- Inputs panel ---------- */
+  .inputs{
+    position:sticky; top:20px;
+  }
+  @media (max-width:880px){ .inputs{ position:static; } }
+
+  .section-title{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:15px;
+    padding: 16px 18px 10px;
+    margin:0;
+    display:flex; align-items:center; gap:8px;
+  }
+  .section-title .num{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px; color:var(--gold-deep);
+    border:1px solid var(--gold-deep); border-radius:50%;
+    width:18px; height:18px; display:inline-flex; align-items:center; justify-content:center;
+  }
+  .field-row{ padding: 6px 18px; display:grid; gap:6px; }
+  .field-row label{
+    font-size:12px; color:var(--muted); font-weight:500;
+  }
+  .two-col{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  input[type=text], input[type=number]{
+    width:100%; padding:8px 9px;
+    border:1px solid var(--rule); border-radius:2px;
+    background:#fffefb;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px; color:var(--ink);
+  }
+  input:focus-visible, button:focus-visible, .tab:focus-visible{
+    outline: 2px solid var(--gold-deep); outline-offset:1px;
+  }
+  hr.rule{ border:none; border-top:1px dashed var(--rule); margin:14px 18px; }
+
+  /* expense rows */
+  .expense-rows{ padding: 4px 18px 4px; display:flex; flex-direction:column; gap:8px;}
+  .expense-card{
+    border:1px solid var(--rule); border-radius:2px; padding:9px 10px;
+    background: #fffefb;
+    display:grid; gap:7px;
+  }
+  .expense-card .row1{ display:grid; grid-template-columns: 1fr auto; gap:8px; align-items:center;}
+  .expense-card .row1 input[type=text]{ font-family:'Inter'; font-size:13px; font-weight:500;}
+  .expense-card .row2{ display:grid; grid-template-columns: 1fr 1fr 1fr; gap:6px;}
+  .expense-card .row2 label{ font-size:10px; }
+  .remove-btn{
+    background:none; border:none; color:var(--expense); font-size:16px;
+    cursor:pointer; line-height:1; padding:2px 4px;
+    font-family:'IBM Plex Mono', monospace;
+  }
+  .remove-btn:hover{ text-decoration:underline; }
+  .add-row-btn{
+    margin: 4px 18px 16px;
+    padding:9px 10px;
+    background:transparent;
+    border:1px dashed var(--gold-deep);
+    color:var(--gold-deep);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px; letter-spacing:.03em;
+    cursor:pointer; border-radius:2px; text-align:center;
+  }
+  .add-row-btn:hover{ background: rgba(184,134,11,0.08); }
+
+  .scenario-grid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; padding: 6px 18px 16px;}
+  .scenario-grid div{ display:flex; flex-direction:column; gap:5px; }
+  .scenario-grid label{ font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em;}
+
+  /* ---------- Output ---------- */
+  .output > .panel + .panel{ margin-top:20px; }
+
+  .hero-panel{ padding: 22px 24px 24px; position:relative; overflow:hidden;}
+  .hero-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;}
+  .hero-label{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--muted);
+    text-transform:uppercase; letter-spacing:.12em; margin:0 0 6px;
+  }
+  .hero-figure{
+    font-family:'Fraunces', serif; font-weight:600;
+    font-size: clamp(34px, 5.4vw, 58px);
+    color: var(--growth);
+    margin:0; letter-spacing:-0.01em;
+  }
+  .hero-sub{ font-size:13px; color:var(--muted); margin-top:6px; }
+
+  .stamp{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--gold-deep);
+    border:2px solid var(--gold-deep);
+    border-radius:50%;
+    width:104px; height:104px;
+    display:flex; align-items:center; justify-content:center; text-align:center;
+    transform: rotate(-9deg);
+    opacity:0.85;
+    flex:none;
+  }
+
+  .tabs{ display:flex; gap:8px; margin-top:18px; flex-wrap:wrap; }
+  .tab{
+    font-family:'IBM Plex Mono', monospace; font-size:12px;
+    padding:7px 12px; border-radius:2px; border:1px solid var(--rule);
+    background:#fffefb; color:var(--ink-soft); cursor:pointer;
+  }
+  .tab.active{ background:var(--ink); color:#fffefb; border-color:var(--ink); }
+
+  .stat-strip{
+    display:grid; grid-template-columns: repeat(3, 1fr); gap:1px;
+    background:var(--rule); margin-top:20px; border:1px solid var(--rule); border-radius:2px; overflow:hidden;
+  }
+  .stat-strip .cell{ background:#fffefb; padding:12px 14px; }
+  .stat-strip .cell .k{ font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:5px; font-family:'IBM Plex Mono', monospace;}
+  .stat-strip .cell .v{ font-family:'IBM Plex Mono', monospace; font-size:16px; font-weight:600;}
+  @media (max-width:640px){ .stat-strip{ grid-template-columns:1fr; } }
+
+  .chart-wrap{ padding: 20px 22px 8px; }
+  .chart-wrap h2{ font-family:'Fraunces', serif; font-weight:600; font-size:17px; margin:0 0 4px;}
+  .chart-wrap p.hint{ font-size:12px; color:var(--muted); margin:0 0 12px; }
+  canvas#growthChart{ max-height:320px; }
+
+  /* ledger table */
+  .ledger-panel{ padding: 20px 0 4px; }
+  .ledger-panel h2{ font-family:'Fraunces', serif; font-weight:600; font-size:17px; margin:0 0 4px; padding:0 22px; }
+  .ledger-panel p.hint{ font-size:12px; color:var(--muted); margin:0 0 12px; padding:0 22px; }
+  .table-scroll{ overflow-x:auto; padding-bottom: 14px; }
+  table.ledger{
+    border-collapse:collapse; width:100%; min-width:760px;
+    font-family:'IBM Plex Mono', monospace; font-size:12.5px;
+  }
+  table.ledger thead th{
+    position:sticky; top:0; background:var(--ink); color:#fffefb;
+    text-align:right; padding:9px 12px; font-weight:500; white-space:nowrap;
+    font-size:11px; letter-spacing:.03em;
+  }
+  table.ledger thead th:first-child, table.ledger thead th:nth-child(2){ text-align:left; }
+  table.ledger td{ padding:7px 12px; text-align:right; white-space:nowrap; border-bottom:1px solid var(--rule); }
+  table.ledger td:first-child, table.ledger td:nth-child(2){ text-align:left; }
+  table.ledger tbody tr:nth-child(even){ background: #FBF7EC; }
+  table.ledger td.expense{ color:var(--expense); }
+  table.ledger td.growth{ color:var(--growth); font-weight:600; }
+
+  footer.foot{
+    margin-top:34px; padding-top:16px; border-top:1px solid var(--rule);
+    font-size:12px; color:var(--muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;
+  }
+
+  .disclaimer{
+    font-size:11.5px; color:var(--muted); padding: 0 18px 16px; line-height:1.5;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <p class="brand-eyebrow">Compound Ledger · No. 01</p>
+      <h1>Investment Forecast Calculator</h1>
+    </div>
+    <p class="top-note">Enter your own salary, expenses &amp; return assumptions —<br>every figure recalculates live, nothing leaves your browser.</p>
+  </header>
+
+  <div class="grid">
+
+    <!-- ============ INPUT PANEL ============ -->
+    <div class="panel inputs">
+
+      <h3 class="section-title"><span class="num">1</span> Salary &amp; horizon</h3>
+      <div class="field-row">
+        <label for="currency">Currency symbol</label>
+        <input type="text" id="currency" value="₹" maxlength="3">
+      </div>
+      <div class="field-row two-col">
+        <div>
+          <label for="startAge">Current age</label>
+          <input type="number" id="startAge" value="30" min="16" max="90">
+        </div>
+        <div>
+          <label for="endAge">Project until age</label>
+          <input type="number" id="endAge" value="60" min="17" max="100">
+        </div>
+      </div>
+      <div class="field-row two-col">
+        <div>
+          <label for="salary">Take-home salary / month</label>
+          <input type="number" id="salary" value="120000" min="0" step="1000">
+        </div>
+        <div>
+          <label for="hike">Annual salary hike %</label>
+          <input type="number" id="hike" value="8" step="0.5">
+        </div>
+      </div>
+      <div class="field-row">
+        <label for="inflation">General inflation % (default expense growth)</label>
+        <input type="number" id="inflation" value="6" step="0.5">
+      </div>
+
+      <hr class="rule">
+
+      <h3 class="section-title"><span class="num">2</span> Monthly expenses</h3>
+      <div class="expense-rows" id="expenseRows"></div>
+      <button class="add-row-btn" id="addExpenseBtn" type="button">+ Add expense line</button>
+
+      <hr class="rule">
+
+      <h3 class="section-title"><span class="num">3</span> Investing</h3>
+      <div class="field-row">
+        <label for="investPct">% of monthly savings invested (rest → emergency fund)</label>
+        <input type="number" id="investPct" value="60" min="0" max="100" step="5">
+      </div>
+
+      <h3 class="section-title" style="padding-top:4px;"><span class="num">4</span> Return scenarios (annual, on invested corpus)</h3>
+      <div class="scenario-grid">
+        <div>
+          <label>Conservative %</label>
+          <input type="number" id="rateLow" value="8" step="0.5">
+        </div>
+        <div>
+          <label>Moderate %</label>
+          <input type="number" id="rateMid" value="10" step="0.5">
+        </div>
+        <div>
+          <label>Aggressive %</label>
+          <input type="number" id="rateHigh" value="12" step="0.5">
+        </div>
+      </div>
+
+      <p class="disclaimer">This is a planning estimate, not financial advice. Returns are assumed constant and before tax — real markets are volatile, and inflation, salary growth, and expenses rarely move in a straight line.</p>
+    </div>
+
+    <!-- ============ OUTPUT ============ -->
+    <div class="output">
+
+      <div class="panel hero-panel">
+        <div class="hero-top">
+          <div>
+            <p class="hero-label">Projected corpus at age <span id="heroAge">60</span></p>
+            <p class="hero-figure" id="heroFigure">₹0</p>
+            <p class="hero-sub" id="heroSub">Moderate scenario · compounding over 0 years</p>
+          </div>
+          <div class="stamp">Compounded<br>Growth</div>
+        </div>
+
+        <div class="tabs" role="tablist" aria-label="Return scenario">
+          <button class="tab" data-scenario="low" type="button">Conservative</button>
+          <button class="tab active" data-scenario="mid" type="button">Moderate</button>
+          <button class="tab" data-scenario="high" type="button">Aggressive</button>
+        </div>
+
+        <div class="stat-strip">
+          <div class="cell">
+            <div class="k">Total invested (principal)</div>
+            <div class="v" id="statPrincipal">₹0</div>
+          </div>
+          <div class="cell">
+            <div class="k">Growth earned</div>
+            <div class="v" id="statGrowth">₹0</div>
+          </div>
+          <div class="cell">
+            <div class="k">Monthly income at 4% draw</div>
+            <div class="v" id="statWithdraw">₹0 / mo</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel chart-wrap">
+        <h2>Corpus over time</h2>
+        <p class="hint">All three return scenarios, side by side.</p>
+        <canvas id="growthChart" height="120"></canvas>
+      </div>
+
+      <div class="panel ledger-panel">
+        <h2>Year-by-year ledger</h2>
+        <p class="hint">Income, expenses and savings, compounded forward one row per year.</p>
+        <div class="table-scroll">
+          <table class="ledger">
+            <thead>
+              <tr>
+                <th>Year</th><th>Age</th><th>Monthly salary</th><th>Annual income</th>
+                <th>Annual expenses</th><th>Annual savings</th><th>Invested</th>
+                <th>Corpus (Cons.)</th><th>Corpus (Mod.)</th><th>Corpus (Aggr.)</th>
+              </tr>
+            </thead>
+            <tbody id="ledgerBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <footer class="foot">
+    <span>Compound Ledger — built for planning, not prediction.</span>
+    <span>Edit any figure on the left; the ledger and chart update instantly.</span>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- state ----------
+  let expenses = [
+    { id: cryptoId(), label: "Rent", amount: 25000, growth: 6, endYears: "" },
+    { id: cryptoId(), label: "Loan EMI", amount: 15000, growth: 0, endYears: 7 },
+    { id: cryptoId(), label: "Bills & utilities", amount: 5000, growth: 6, endYears: "" },
+    { id: cryptoId(), label: "Groceries", amount: 10000, growth: 6, endYears: "" },
+    { id: cryptoId(), label: "Lifestyle & other", amount: 15000, growth: 6, endYears: "" }
+  ];
+  let activeScenario = 'mid';
+  let chart = null;
+
+  function cryptoId(){ return 'r' + Math.random().toString(36).slice(2, 10); }
+
+  // ---------- DOM refs ----------
+  const $ = (id) => document.getElementById(id);
+  const expenseRowsEl = $('expenseRows');
+  const ledgerBody = $('ledgerBody');
+
+  // ---------- render expense rows ----------
+  function renderExpenseRows(){
+    expenseRowsEl.innerHTML = '';
+    expenses.forEach(exp => {
+      const card = document.createElement('div');
+      card.className = 'expense-card';
+      card.innerHTML = `
+        <div class="row1">
+          <input type="text" value="${escapeHtml(exp.label)}" data-field="label" aria-label="Expense name">
+          <button class="remove-btn" type="button" aria-label="Remove ${escapeHtml(exp.label)}" title="Remove">✕</button>
+        </div>
+        <div class="row2">
+          <div>
+            <label>₹ / month</label>
+            <input type="number" value="${exp.amount}" data-field="amount" min="0" step="500">
+          </div>
+          <div>
+            <label>Growth %/yr</label>
+            <input type="number" value="${exp.growth}" data-field="growth" step="0.5">
+          </div>
+          <div>
+            <label>Ends after (yrs)</label>
+            <input type="number" value="${exp.endYears}" data-field="endYears" min="0" placeholder="never">
+          </div>
+        </div>
+      `;
+      const [labelInput, amountInput, growthInput, endInput] = [
+        card.querySelector('[data-field=label]'),
+        card.querySelector('[data-field=amount]'),
+        card.querySelector('[data-field=growth]'),
+        card.querySelector('[data-field=endYears]')
+      ];
+      labelInput.addEventListener('input', e => { exp.label = e.target.value; recalcAndRender(); });
+      amountInput.addEventListener('input', e => { exp.amount = parseFloat(e.target.value) || 0; recalcAndRender(); });
+      growthInput.addEventListener('input', e => { exp.growth = parseFloat(e.target.value) || 0; recalcAndRender(); });
+      endInput.addEventListener('input', e => { exp.endYears = e.target.value === '' ? '' : (parseFloat(e.target.value) || 0); recalcAndRender(); });
+      card.querySelector('.remove-btn').addEventListener('click', () => {
+        expenses = expenses.filter(x => x.id !== exp.id);
+        renderExpenseRows();
+        recalcAndRender();
+      });
+      expenseRowsEl.appendChild(card);
+    });
+  }
+
+  $('addExpenseBtn').addEventListener('click', () => {
+    expenses.push({ id: cryptoId(), label: "New expense", amount: 5000, growth: parseFloat($('inflation').value) || 0, endYears: "" });
+    renderExpenseRows();
+    recalcAndRender();
+  });
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ---------- currency formatting ----------
+  function fmt(n){
+    const sym = $('currency').value || '';
+    const rounded = Math.round(n);
+    const neg = rounded < 0;
+    let out = Math.abs(rounded).toLocaleString('en-IN');
+    return (neg ? '-' : '') + sym + out;
+  }
+  function fmtCompact(n){
+    const sym = $('currency').value || '';
+    const abs = Math.abs(n);
+    let out;
+    if (abs >= 1e7) out = (n/1e7).toFixed(2) + ' Cr';
+    else if (abs >= 1e5) out = (n/1e5).toFixed(2) + ' L';
+    else if (abs >= 1e3) out = (n/1e3).toFixed(1) + 'k';
+    else out = Math.round(n).toString();
+    return sym + out;
+  }
+
+  // ---------- core projection engine ----------
+  function project(){
+    const startAge = parseFloat($('startAge').value) || 0;
+    const endAge = parseFloat($('endAge').value) || startAge;
+    const years = Math.max(1, Math.round(endAge - startAge));
+    const startSalary = parseFloat($('salary').value) || 0;
+    const hike = (parseFloat($('hike').value) || 0) / 100;
+    const investPct = (parseFloat($('investPct').value) || 0) / 100;
+    const rLow = (parseFloat($('rateLow').value) || 0) / 100;
+    const rMid = (parseFloat($('rateMid').value) || 0) / 100;
+    const rHigh = (parseFloat($('rateHigh').value) || 0) / 100;
+    const currentYear = new Date().getFullYear();
+
+    // working copy of expense amounts, so we can compound them independently of the UI state
+    let running = expenses.map(e => ({ ...e, amt: e.amount }));
+
+    let salary = startSalary;
+    let corpusLow = 0, corpusMid = 0, corpusHigh = 0;
+    const rows = [];
+
+    for (let i = 1; i <= years; i++){
+      if (i > 1) salary = salary * (1 + hike);
+      const income = salary * 12;
+
+      let totalExpenseMonth = 0;
+      running.forEach(e => {
+        if (i === 1){
+          e.amt = e.amount;
+        } else {
+          const ended = (e.endYears !== "" && e.endYears !== null && i > Number(e.endYears));
+          e.amt = ended ? 0 : e.amt * (1 + (e.growth/100));
+        }
+        totalExpenseMonth += e.amt;
+      });
+      const expenseYear = totalExpenseMonth * 12;
+      const savings = income - expenseYear;
+      const invested = savings * investPct;
+
+      corpusLow  = invested + corpusLow  * (1 + rLow);
+      corpusMid  = invested + corpusMid  * (1 + rMid);
+      corpusHigh = invested + corpusHigh * (1 + rHigh);
+
+      rows.push({
+        year: currentYear + i - 1,
+        age: startAge + i - 1,
+        salary, income, expenseYear, savings, invested,
+        corpusLow, corpusMid, corpusHigh
+      });
+    }
+    return rows;
+  }
+
+  // ---------- render ----------
+  function recalcAndRender(){
+    const rows = project();
+    const last = rows[rows.length - 1] || { corpusLow:0, corpusMid:0, corpusHigh:0, age:0 };
+    const totalInvested = rows.reduce((s,r) => s + r.invested, 0);
+
+    const scenarioMap = { low: 'corpusLow', mid: 'corpusMid', high: 'corpusHigh' };
+    const scenarioName = { low: 'Conservative', mid: 'Moderate', high: 'Aggressive' };
+    const chosenField = scenarioMap[activeScenario];
+    const chosenValue = last[chosenField] || 0;
+
+    $('heroAge').textContent = Math.round(last.age);
+    $('heroFigure').textContent = fmt(chosenValue);
+    $('heroSub').textContent = `${scenarioName[activeScenario]} scenario · compounding over ${rows.length} year${rows.length===1?'':'s'}`;
+
+    $('statPrincipal').textContent = fmt(totalInvested);
+    $('statGrowth').textContent = fmt(Math.max(0, chosenValue - totalInvested));
+    $('statWithdraw').textContent = fmt(chosenValue * 0.04 / 12) + ' / mo';
+
+    // ledger
+    ledgerBody.innerHTML = rows.map(r => `
+      <tr>
+        <td>${r.year}</td>
+        <td>${Math.round(r.age)}</td>
+        <td>${fmt(r.salary)}</td>
+        <td>${fmt(r.income)}</td>
+        <td class="expense">${fmt(r.expenseYear)}</td>
+        <td class="${r.savings>=0?'growth':'expense'}">${fmt(r.savings)}</td>
+        <td>${fmt(r.invested)}</td>
+        <td class="growth">${fmt(r.corpusLow)}</td>
+        <td class="growth">${fmt(r.corpusMid)}</td>
+        <td class="growth">${fmt(r.corpusHigh)}</td>
+      </tr>
+    `).join('');
+
+    renderChart(rows);
+  }
+
+  function renderChart(rows){
+    const ctx = document.getElementById('growthChart').getContext('2d');
+    const labels = rows.map(r => r.year);
+    const data = {
+      labels,
+      datasets: [
+        { label: 'Conservative', data: rows.map(r=>r.corpusLow), borderColor: '#9B3B34', backgroundColor:'transparent', borderWidth:2, tension:0.25, pointRadius:0 },
+        { label: 'Moderate', data: rows.map(r=>r.corpusMid), borderColor: '#B8860B', backgroundColor:'transparent', borderWidth:2.5, tension:0.25, pointRadius:0 },
+        { label: 'Aggressive', data: rows.map(r=>r.corpusHigh), borderColor: '#2F6D4F', backgroundColor:'transparent', borderWidth:2, tension:0.25, pointRadius:0 },
+      ]
+    };
+    const options = {
+      responsive:true, maintainAspectRatio:false,
+      interaction:{ mode:'index', intersect:false },
+      plugins:{
+        legend:{ position:'bottom', labels:{ font:{ family:"'IBM Plex Mono', monospace", size:11 }, color:'#33456e', boxWidth:14 } },
+        tooltip:{
+          callbacks:{ label: (item) => `${item.dataset.label}: ${fmtCompact(item.raw)}` }
+        }
+      },
+      scales:{
+        x:{ grid:{ color:'#EFE7D2' }, ticks:{ font:{ family:"'IBM Plex Mono', monospace", size:10 }, color:'#786F5C' } },
+        y:{ grid:{ color:'#EFE7D2' }, ticks:{ font:{ family:"'IBM Plex Mono', monospace", size:10 }, color:'#786F5C', callback:(v)=>fmtCompact(v) } }
+      }
+    };
+    if (chart){
+      chart.data = data; chart.options = options; chart.update();
+    } else {
+      chart = new Chart(ctx, { type:'line', data, options });
+    }
+  }
+
+  // ---------- wire up top-level inputs ----------
+  ['currency','startAge','endAge','salary','hike','inflation','investPct','rateLow','rateMid','rateHigh']
+    .forEach(id => $(id).addEventListener('input', recalcAndRender));
+
+  document.querySelectorAll('.tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeScenario = btn.dataset.scenario;
+      recalcAndRender();
+    });
+  });
+
+  // ---------- init ----------
+  renderExpenseRows();
+  recalcAndRender();
+})();
+</script>
+</body>
+</html>
